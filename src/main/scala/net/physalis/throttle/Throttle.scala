@@ -1,8 +1,8 @@
-package net.physalis
+package net.physalis.throttle
 
 import java.time.temporal.TemporalUnit
-import java.time.{ZonedDateTime, Clock}
-import java.util.concurrent.{ConcurrentLinkedQueue, TimeUnit, Delayed, DelayQueue}
+import java.time.{Clock, ZonedDateTime}
+import java.util.concurrent.{ConcurrentLinkedQueue, DelayQueue, Delayed, TimeUnit}
 
 import scala.collection._
 
@@ -34,8 +34,8 @@ class Throttle[Bucket] (
 )(
   processor: (Bucket => Unit)
 )(implicit clock: () => Clock) {
+  import scala.concurrent.ExecutionContext.Implicits.global
   import scala.concurrent._
-  import ExecutionContext.Implicits.global
 
   private val tokenQueue = new DelayQueue[Token]
   private val buckets = new ConcurrentLinkedQueue[Bucket]
