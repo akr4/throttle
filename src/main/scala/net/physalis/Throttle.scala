@@ -41,9 +41,9 @@ class Throttle[Bucket] (
   private val buckets = new ConcurrentLinkedQueue[Bucket]
   private val waitingTasks = new ConcurrentLinkedQueue[Int]
 
-  tokenQueue.add(new ExpiredToken())
-  tokenQueue.add(new ExpiredToken())
-  tokenQueue.add(new ExpiredToken())
+  1 to configuration.numberOfTasks foreach { _ =>
+    tokenQueue.add(new ExpiredToken())
+  }
 
   def put(bucket: Bucket) {
     if (tokenQueue.poll(0, TimeUnit.SECONDS) != null) {
