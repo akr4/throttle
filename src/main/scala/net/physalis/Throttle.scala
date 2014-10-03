@@ -1,27 +1,39 @@
 package net.physalis
 
+import java.time.temporal.TemporalUnit
 import java.time.{ZonedDateTime, Clock}
 import java.util.concurrent.{ConcurrentLinkedQueue, TimeUnit, Delayed, DelayQueue}
 
 import scala.collection._
 
-class Token(clock: Clock) extends Delayed {
-  private val enqueuedAt = ZonedDateTime.now(clock)
+trait Token extends Delayed
+
+class TokenImpl(configuration: Configuration, clock: () => Clock) extends Token {
+  private val enqueuedAt = ZonedDateTime.now(clock())
   
   override def getDelay(unit: TimeUnit): Long =
-    unit.convert(enqueuedAt.plusSeconds(10).toEpochSecond - ZonedDateTime.now(clock).toEpochSecond, TimeUnit.SECONDS)
+    unit.convert(enqueuedAt.plus(configuration.inDurationAmount, configuration.inDurationUnit).toEpochSecond - ZonedDateTime.now(clock()).toEpochSecond, TimeUnit.SECONDS)
 
   override def compareTo(o: Delayed): Int =
     getDelay(TimeUnit.SECONDS).compareTo(o.getDelay(TimeUnit.SECONDS))
 }
 
-class ExpiredToken (clock: Clock) extends Token(clock) {
+class ExpiredToken extends Token {
   override def getDelay(unit: TimeUnit): Long = -1
+  override def compareTo(o: Delayed): Int = 0
 }
 
+case class Configuration (
+  numberOfTasks: Int,
+  inDurationAmount: Long,
+  inDurationUnit: TemporalUnit
+)
+
 class Throttle[Bucket] (
+  configuration: Configuration
+)(
   processor: (Bucket => Unit)
-)(implicit _clock: Clock) {
+)(implicit clock: () => Clock) {
   import scala.concurrent._
   import ExecutionContext.Implicits.global
 
@@ -29,11 +41,11 @@ class Throttle[Bucket] (
   private val buckets = new ConcurrentLinkedQueue[Bucket]
   private val waitingTasks = new ConcurrentLinkedQueue[Int]
 
-  tokenQueue.add(new ExpiredToken(_clock))
-  tokenQueue.add(new ExpiredToken(_clock))
-  tokenQueue.add(new ExpiredToken(_clock))
+  tokenQueue.add(new ExpiredToken())
+  tokenQueue.add(new ExpiredToken())
+  tokenQueue.add(new ExpiredToken())
 
-  def put(bucket: Bucket)(implicit clock: Clock) {
+  def put(bucket: Bucket) {
     if (tokenQueue.poll(0, TimeUnit.SECONDS) != null) {
       doTask(Seq(bucket))
     } else {
@@ -63,8 +75,8 @@ class Throttle[Bucket] (
     returnToken()
   }
 
-  private def returnToken()(implicit clock: Clock) {
-    tokenQueue.add(new Token(clock))
+  private def returnToken() {
+    tokenQueue.add(new TokenImpl(configuration, clock))
   }
 
   private def remainingBuckets: Seq[Bucket] = {
