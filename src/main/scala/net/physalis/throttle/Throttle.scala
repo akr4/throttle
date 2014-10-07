@@ -47,7 +47,9 @@ class Throttle[Bucket] (
 
   def put(bucket: Bucket) {
     if (tokenQueue.poll(0, TimeUnit.SECONDS) != null) {
-      doTask(Seq(bucket))
+      Future {
+        doTask(Seq(bucket))
+      }
     } else {
       buckets.add(bucket)
       // 待ちタスクがある場合は早々に処理を終わらせる
