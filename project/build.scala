@@ -5,7 +5,7 @@ object MyBuild extends Build {
 
   lazy val main = Project("throttle", file("."),
     settings = Defaults.defaultSettings ++ Seq(
-      version := "0.1",
+      version := "0.2",
       organization := "net.physalis",
       crossScalaVersions := Seq("2.11.2"),
       scalaVersion := "2.11.2",
