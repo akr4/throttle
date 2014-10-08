@@ -32,7 +32,7 @@ case class Configuration (
 class Throttle[Bucket] (
   configuration: Configuration
 )(
-  processor: (Bucket => Unit)
+  processor: (Seq[Bucket] => Unit)
 )(implicit clock: () => Clock) {
   import scala.concurrent.ExecutionContext.Implicits.global
   import scala.concurrent._
@@ -71,9 +71,7 @@ class Throttle[Bucket] (
   }
 
   private def doTask(buckets: Seq[Bucket]) {
-    for (b <- buckets) {
-      processor(b)
-    }
+    processor(buckets)
     returnToken()
   }
 
